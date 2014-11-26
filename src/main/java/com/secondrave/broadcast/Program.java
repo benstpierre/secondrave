@@ -29,6 +29,7 @@ public class Program implements ActionListener, ItemListener {
     private Map<CheckboxMenuItem, Mixer> sourceMap = new HashMap<CheckboxMenuItem, Mixer>(20);
 
     private Mixer selectedMixer;
+    private AudioUploader audioUploader;
 
     public static void main(String[] args) {
         new Program().doTray();
@@ -69,6 +70,12 @@ public class Program implements ActionListener, ItemListener {
         } catch (AWTException e) {
             System.out.println("TrayIcon could not be added.");
         }
+        setInitialState();
+    }
+
+    private void setInitialState() {
+        this.startServer.setEnabled(false);
+        this.stopServer.setEnabled(false);
     }
 
     //Obtain the image URL
@@ -96,18 +103,14 @@ public class Program implements ActionListener, ItemListener {
         }
     }
 
-    private void updateSelectedMixerGui() {
-        for (Map.Entry<CheckboxMenuItem, Mixer> entry : sourceMap.entrySet()) {
-            entry.getKey().setState(entry.getValue() == this.selectedMixer);
-        }
-    }
-
     private void startServer() {
-
+        this.audioUploader = new AudioUploader(selectedMixer);
+        this.audioUploader.start();
     }
 
     private void stopServer() {
-
+        this.audioUploader.stop();
+        this.audioUploader = null;
     }
 
     private void showAbout() {
@@ -123,17 +126,20 @@ public class Program implements ActionListener, ItemListener {
         //Check this out for interest
         //http://www.java-forum.org/spiele-multimedia-programmierung/94699-java-sound-api-zuordnung-port-mixer-input-mixer.html
         final String newLine = System.getProperty("line.separator");
-        final String inputTypeString = "LINE_IN"; // or COMPACT_DISC or MICROPHONE etc ...
-        final Port.Info myInputType = new Port.Info((Port.class), inputTypeString, true);
-        final AudioFormat af = new AudioFormat(
-                AudioFormat.Encoding.PCM_SIGNED,
-                44100.0F,
-                16,
-                2,
-                2 * 2,
-                44100.0F,
-                false);
-        final DataLine.Info targetDataLineInfo = new DataLine.Info(TargetDataLine.class, af);
+
+
+        final AudioFormat.Encoding encoding = AudioFormat.Encoding.PCM_SIGNED;
+        final float rate = 44100.0f;
+        final int channels = 2;
+        final int frameSize = 4;
+        final int sampleSize = 16;
+        final boolean bigEndian = true;
+
+        final AudioFormat audioFormat = new AudioFormat(encoding, rate, sampleSize, channels, (sampleSize / 8)
+                * channels, rate, bigEndian);
+
+        final DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
+
         TargetDataLine targetDataLine;
 
         //Go through the System audio mixers
@@ -141,39 +147,44 @@ public class Program implements ActionListener, ItemListener {
             try {
                 Mixer targetMixer = AudioSystem.getMixer(mixerInfo);
                 targetMixer.open();
+
+
                 //Check if it supports the desired format
-                if (targetMixer.isLineSupported(targetDataLineInfo)) {
-                    System.out.println(mixerInfo.getName() + " supports recording @" + af);
-                    //now go back and start again trying to match a mixer to a port
-                    //the only way I figured how is by matching name, because
-                    //the port mixer name is the same as the actual mixer with "Port " in front of it
-                    // there MUST be a better way
-                    for (Mixer.Info mifo : AudioSystem.getMixerInfo()) {
-                        String port_string = "Port ";
-                        if ((port_string + mixerInfo.getName()).equals(mifo.getName())) {
-                            System.out.println("Matched Port to Mixer:" + mixerInfo.getName());
-                            Mixer portMixer = AudioSystem.getMixer(mifo);
-                            portMixer.open();
-                            portMixer.isLineSupported(myInputType);
-                            //now check the mixer has the right input type eg LINE_IN
+                if (targetMixer.isLineSupported(info)) {
+                    mixers.add(targetMixer);
 
-                            this.mixers.add(portMixer);
-
-
-                            if (portMixer.isLineSupported(myInputType)) {
-                                //OK we have a supported Port Type for the Mixer
-                                //This has all matched (hopefully)
-                                //now just get the record line
-                                //There should be at least 1 line, usually 32 and possible unlimited
-                                // which would be "AudioSystem.Unspecified" if we ask the mixer
-                                //but I haven't checked any of this
-                                targetDataLine = (TargetDataLine) targetMixer.getLine(targetDataLineInfo);
-                                System.out.println("Got TargetDataLine from :" + targetMixer.getMixerInfo().getName());
-                                return;
-                            }
-                        }
-                    }
-                    System.out.println(newLine);
+//                    System.out.println(mixerInfo.getName() + " supports recording @" + audioFormat);
+//                    //now go back and start again trying to match a mixer to a port
+//                    //the only way I figured how is by matching name, because
+//                    //the port mixer name is the same as the actual mixer with "Port " in front of it
+//                    // there MUST be a better way
+//
+//
+//                    for (Mixer.Info mifo : AudioSystem.getMixerInfo()) {
+//                        final String port_string = "Port ";
+//                        if ((port_string + mixerInfo.getName()).equals(mifo.getName())) {
+//                            System.out.println("Matched Port to Mixer:" + mixerInfo.getName());
+//                            final Mixer portMixer = AudioSystem.getMixer(mifo);
+//                            portMixer.open();
+//                            portMixer.isLineSupported(info);
+//                            //now check the mixer has the right input type eg LINE_IN
+//
+//
+//
+//                            if (portMixer.isLineSupported(info)) {
+//                                //OK we have a supported Port Type for the Mixer
+//                                //This has all matched (hopefully)
+//                                //now just get the record line
+//                                //There should be at least 1 line, usually 32 and possible unlimited
+//                                // which would be "AudioSystem.Unspecified" if we ask the mixer
+//                                //but I haven't checked any of this
+//                                targetDataLine = (TargetDataLine) targetMixer.getLine(info);
+//                                System.out.println("Got TargetDataLine from :" + targetMixer.getMixerInfo().getName());
+//                                return;
+//                            }
+//                        }
+//                    }
+//                    System.out.println(newLine);
                 }
                 targetMixer.close();
             } catch (Exception e) {
@@ -197,7 +208,10 @@ public class Program implements ActionListener, ItemListener {
         final Mixer selectedMixer = sourceMap.get(e.getSource());
         if (selectedMixer != null) {
             this.selectedMixer = selectedMixer;
-            updateSelectedMixerGui();
+            for (Map.Entry<CheckboxMenuItem, Mixer> entry : sourceMap.entrySet()) {
+                entry.getKey().setState(entry.getValue() == this.selectedMixer);
+            }
+            this.startServer.setEnabled(true);
         }
     }
 
