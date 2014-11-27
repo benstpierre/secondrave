@@ -24,25 +24,14 @@ public class AudioServer extends AbstractHandler implements Runnable {
 
 
     private List<AudioChunk> audioChunks = Lists.newArrayList();
-
-    private Instant nextStartInstant;
     private Server server;
 
-    public synchronized void pushAudioData(byte[] audioData) {
-        if (nextStartInstant == null) {
-            nextStartInstant = Instant.now();
-        }
-        final AudioChunk audioChunk = new AudioChunk();
-        audioChunk.setAudioData(audioData);
-        final int audioLength = audioData.length / 44100;
-        audioChunk.setLengthMS(audioLength);
-        audioChunk.setPlayAt(nextStartInstant);
+    public synchronized void pushAudioData(AudioChunk audioChunk) {
         audioChunks.add(audioChunks.size(), audioChunk);
-        nextStartInstant = nextStartInstant.plus(audioLength);
         cleanupStaleAudio();
     }
 
-    private synchronized void cleanupStaleAudio() {
+    private void cleanupStaleAudio() {
         final Instant now = Instant.now();
         Iterables.removeIf(audioChunks, new Predicate<AudioChunk>() {
             @Override

@@ -1,5 +1,7 @@
 package com.secondrave.broadcast.server;
 
+import org.joda.time.Instant;
+
 import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -49,6 +51,7 @@ public class AudioCapture implements Runnable {
         targetDataLine.start();
 
         int count = 0;
+        Instant latestInstant = Instant.now();
         while (this.keepGoing.get()) {
             if ((numBytesRead = targetDataLine.read(data, 0, bufferLengthInBytes)) == -1) {
                 break;
@@ -56,9 +59,16 @@ public class AudioCapture implements Runnable {
             count++;
             if (count == 10) {
                 out.write(data, 0, numBytesRead);
-                audioServer.pushAudioData(out.toByteArray());
+                final byte[] arrData = out.toByteArray();
+                final int audioLength = arrData.length / 44100;
+                final AudioChunk audioChunk = new AudioChunk();
+                audioChunk.setAudioData(arrData);
+                audioChunk.setLengthMS(audioLength);
+                audioChunk.setPlayAt(latestInstant.plus(5000));
+                audioServer.pushAudioData(audioChunk);
                 out.reset();
                 count = 0;
+                latestInstant = Instant.now();
             }
         }
 
