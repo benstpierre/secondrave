@@ -1,6 +1,7 @@
 package com.secondrave.broadcast;
 
 import com.secondrave.broadcast.server.AudioServer;
+import com.secondrave.broadcast.server.AudioCapture;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
@@ -34,11 +35,11 @@ public class Program implements ActionListener, ItemListener {
     private Map<CheckboxMenuItem, Mixer> sourceMap = new HashMap<CheckboxMenuItem, Mixer>(20);
 
     private Mixer selectedMixer;
-    private AudioUploader audioUploader;
+    private AudioCapture audioCapture;
+    private AudioServer audioServer;
 
     public static void main(String[] args) {
-        new AudioServer().startJetty();
-        //new Program().doTray();
+        new Program().doTray();
     }
 
     private void doTray() {
@@ -110,13 +111,17 @@ public class Program implements ActionListener, ItemListener {
     }
 
     private void startServer() {
-        this.audioUploader = new AudioUploader(selectedMixer, dataLineInfo, audioFormat);
-        this.audioUploader.start();
+        this.audioServer = new AudioServer();
+        new Thread(audioServer).start();
+        this.audioCapture = new AudioCapture(selectedMixer, dataLineInfo, audioFormat, audioServer);
+        new Thread(audioCapture).start();
     }
 
     private void stopServer() {
-        this.audioUploader.stop();
-        this.audioUploader = null;
+        this.audioCapture.requestStop();
+        this.audioCapture = null;
+        this.audioServer.requestStop();
+        this.audioServer = null;
     }
 
     private void showAbout() {

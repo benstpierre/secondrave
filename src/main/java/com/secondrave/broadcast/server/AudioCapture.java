@@ -1,35 +1,40 @@
-package com.secondrave.broadcast;
+package com.secondrave.broadcast.server;
 
 import javax.sound.sampled.*;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.annotation.Target;
-import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by benstpierre on 14-11-26.
  */
-public class AudioUploader {
+public class AudioCapture implements Runnable {
 
     private final Mixer selectedMixer;
     private final DataLine.Info dataLineInfo;
     private final AudioFormat audioFormat;
+    private final AudioServer audioServer;
 
-    private TargetDataLine targetDataLine;
+    private AtomicBoolean keepGoing = new AtomicBoolean(true);
 
-    public AudioUploader(Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat) {
+    public AudioCapture(Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat, AudioServer audioServer) {
         this.selectedMixer = selectedMixer;
         this.dataLineInfo = dataLineInfo;
         this.audioFormat = audioFormat;
+        this.audioServer = audioServer;
     }
 
-    public void start() {
+    public void requestStop() {
+        this.keepGoing.set(false);
+    }
+
+    @Override
+    public void run() {
+        final TargetDataLine targetDataLine;
         try {
             selectedMixer.open();
-            this.targetDataLine = (TargetDataLine) selectedMixer.getLine(dataLineInfo);
-            this.targetDataLine.open(audioFormat, this.targetDataLine.getBufferSize());
+            targetDataLine = (TargetDataLine) selectedMixer.getLine(dataLineInfo);
+            targetDataLine.open(audioFormat, targetDataLine.getBufferSize());
         } catch (LineUnavailableException e) {
             throw new RuntimeException(e);
         }
@@ -44,30 +49,30 @@ public class AudioUploader {
         targetDataLine.start();
 
         int count = 0;
-        while (count < 50) {
+        while (this.keepGoing.get()) {
             if ((numBytesRead = targetDataLine.read(data, 0, bufferLengthInBytes)) == -1) {
                 break;
             }
-            out.write(data, 0, numBytesRead);
             count++;
+            if (count == 10) {
+                out.write(data, 0, numBytesRead);
+                audioServer.pushAudioData(out.toByteArray());
+                out.reset();
+                count = 0;
+            }
         }
 
         // we reached the end of the stream.
-        // stop and close the line.
+        // requestStop and close the line.
         targetDataLine.stop();
         targetDataLine.close();
-        targetDataLine = null;
 
-        // stop and close the output stream
+        // requestStop and close the output stream
         try {
             out.flush();
             out.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-    }
-
-    public void stop() {
-
     }
 }
