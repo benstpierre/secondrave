@@ -17,6 +17,9 @@ import java.util.Map;
  */
 public class Program implements ActionListener, ItemListener {
 
+    final AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 2, (16 / 8) * 2, 44100.0f, true);
+    final DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
+
 
     final MenuItem startServer = new MenuItem("Start Server");
     final MenuItem stopServer = new MenuItem("Stop Server");
@@ -104,7 +107,7 @@ public class Program implements ActionListener, ItemListener {
     }
 
     private void startServer() {
-        this.audioUploader = new AudioUploader(selectedMixer);
+        this.audioUploader = new AudioUploader(selectedMixer, dataLineInfo, audioFormat);
         this.audioUploader.start();
     }
 
@@ -123,72 +126,22 @@ public class Program implements ActionListener, ItemListener {
     }
 
     private void populateAudioInputList() {
-        //Check this out for interest
-        //http://www.java-forum.org/spiele-multimedia-programmierung/94699-java-sound-api-zuordnung-port-mixer-input-mixer.html
-        final String newLine = System.getProperty("line.separator");
-
-
-        final AudioFormat.Encoding encoding = AudioFormat.Encoding.PCM_SIGNED;
-        final float rate = 44100.0f;
-        final int channels = 2;
-        final int frameSize = 4;
-        final int sampleSize = 16;
-        final boolean bigEndian = true;
-
-        final AudioFormat audioFormat = new AudioFormat(encoding, rate, sampleSize, channels, (sampleSize / 8)
-                * channels, rate, bigEndian);
-
-        final DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
-
-        TargetDataLine targetDataLine;
-
         //Go through the System audio mixers
         for (Mixer.Info mixerInfo : AudioSystem.getMixerInfo()) {
+            Mixer mixer = null;
             try {
-                Mixer targetMixer = AudioSystem.getMixer(mixerInfo);
-                targetMixer.open();
-
-
+                mixer = AudioSystem.getMixer(mixerInfo);
+                mixer.open();
                 //Check if it supports the desired format
-                if (targetMixer.isLineSupported(info)) {
-                    mixers.add(targetMixer);
-
-//                    System.out.println(mixerInfo.getName() + " supports recording @" + audioFormat);
-//                    //now go back and start again trying to match a mixer to a port
-//                    //the only way I figured how is by matching name, because
-//                    //the port mixer name is the same as the actual mixer with "Port " in front of it
-//                    // there MUST be a better way
-//
-//
-//                    for (Mixer.Info mifo : AudioSystem.getMixerInfo()) {
-//                        final String port_string = "Port ";
-//                        if ((port_string + mixerInfo.getName()).equals(mifo.getName())) {
-//                            System.out.println("Matched Port to Mixer:" + mixerInfo.getName());
-//                            final Mixer portMixer = AudioSystem.getMixer(mifo);
-//                            portMixer.open();
-//                            portMixer.isLineSupported(info);
-//                            //now check the mixer has the right input type eg LINE_IN
-//
-//
-//
-//                            if (portMixer.isLineSupported(info)) {
-//                                //OK we have a supported Port Type for the Mixer
-//                                //This has all matched (hopefully)
-//                                //now just get the record line
-//                                //There should be at least 1 line, usually 32 and possible unlimited
-//                                // which would be "AudioSystem.Unspecified" if we ask the mixer
-//                                //but I haven't checked any of this
-//                                targetDataLine = (TargetDataLine) targetMixer.getLine(info);
-//                                System.out.println("Got TargetDataLine from :" + targetMixer.getMixerInfo().getName());
-//                                return;
-//                            }
-//                        }
-//                    }
-//                    System.out.println(newLine);
+                if (mixer.isLineSupported(dataLineInfo)) {
+                    mixers.add(mixer);
                 }
-                targetMixer.close();
-            } catch (Exception e) {
+            } catch (LineUnavailableException e) {
                 e.printStackTrace();
+            } finally {
+                if (mixer != null) {
+                    mixer.close();
+                }
             }
         }
         addMixersToGui();

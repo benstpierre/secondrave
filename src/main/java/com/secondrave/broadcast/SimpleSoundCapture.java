@@ -340,7 +340,7 @@ public class SimpleSoundCapture extends JPanel implements ActionListener {
 
             try {
                 line = getTargetLine(format);
-                //line = (TargetDataLine) AudioSystem.getLine(info);
+                //line = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
                 line.open(format, line.getBufferSize());
             } catch (LineUnavailableException ex) {
                 shutDown("Unable to open the line: " + ex);
