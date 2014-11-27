@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class Program implements ActionListener, ItemListener {
 
-    final AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 1, 2, 44100.0f, true);
+    final AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 1, 2, 44100.0f, false);
     final DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
 
 

@@ -2,8 +2,6 @@ package com.secondrave.broadcast.server;
 
 import org.joda.time.Instant;
 
-import java.util.Arrays;
-
 /**
  * Created by benstpierre on 14-10-27.
  */
@@ -41,7 +39,7 @@ public class AudioChunk {
     public String toString() {
         return "AudioChunk{" +
                 "lengthMS=" + lengthMS +
-                ", audioData=" + Arrays.toString(audioData) +
+                ", audioDataLength=" + audioData.length +
                 ", playAt=" + playAt +
                 '}';
     }
