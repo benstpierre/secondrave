@@ -1,5 +1,7 @@
 package com.secondrave.broadcast;
 
+import com.secondrave.broadcast.server.AudioServer;
+
 import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +19,7 @@ import java.util.Map;
  */
 public class Program implements ActionListener, ItemListener {
 
-    final AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 2, (16 / 8) * 2, 44100.0f, true);
+    final AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 1, 2, 44100.0f, true);
     final DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
 
 
@@ -35,7 +37,8 @@ public class Program implements ActionListener, ItemListener {
     private AudioUploader audioUploader;
 
     public static void main(String[] args) {
-        new Program().doTray();
+        new AudioServer().startJetty();
+        //new Program().doTray();
     }
 
     private void doTray() {
