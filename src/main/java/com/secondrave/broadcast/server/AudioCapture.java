@@ -6,6 +6,8 @@ import org.joda.time.Instant;
 import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -18,6 +20,7 @@ public class AudioCapture implements Runnable {
     private final AudioFormat audioFormat;
     private final AudioServer audioServer;
 
+    final Executor executor = Executors.newFixedThreadPool(1);
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
 
     public AudioCapture(Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat, AudioServer audioServer) {
@@ -52,24 +55,19 @@ public class AudioCapture implements Runnable {
         targetDataLine.start();
 
         int count = 0;
-        Instant latestInstant = Instant.now();
+        Instant currentStart = Instant.now().plus(Duration.standardSeconds(10));
         while (this.keepGoing.get()) {
             if ((numBytesRead = targetDataLine.read(data, 0, bufferLengthInBytes)) == -1) {
                 break;
             }
             out.write(data, 0, numBytesRead);
             count++;
-            if (count == 40) {
+            if (count == 20) {
                 final byte[] arrData = out.toByteArray();
-                final int audioLength = (int) (arrData.length / 44.1 / 2);
-                final AudioChunk audioChunk = new AudioChunk();
-                audioChunk.setAudioData(arrData);
-                audioChunk.setLengthMS(audioLength);
-                audioChunk.setPlayAt(latestInstant.plus(Duration.standardSeconds(15)));
-                audioServer.pushAudioData(audioChunk);
+                pushAudioData(arrData, currentStart);
                 out.reset();
                 count = 0;
-                latestInstant = Instant.now();
+                currentStart = currentStart.plus(Duration.millis((int) (arrData.length / 44.1 / 2)));
             }
         }
 
@@ -85,5 +83,18 @@ public class AudioCapture implements Runnable {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private void pushAudioData(final byte[] arrData, final Instant currentSampleStartsAtInstant) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final AudioChunk audioChunk = new AudioChunk();
+                audioChunk.setAudioData(arrData);
+                audioChunk.setDuration(Duration.millis((int) (arrData.length / 44.1 / 2)));
+                audioChunk.setPlayAt(currentSampleStartsAtInstant.plus(Duration.standardSeconds(30)));
+                audioServer.pushAudioData(audioChunk);
+            }
+        });
     }
 }

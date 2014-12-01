@@ -1,5 +1,6 @@
 package com.secondrave.broadcast.server;
 
+import org.joda.time.Duration;
 import org.joda.time.Instant;
 
 /**
@@ -7,16 +8,16 @@ import org.joda.time.Instant;
  */
 public class AudioChunk {
 
-    private int lengthMS;
     private byte[] audioData;
-    Instant playAt;
+    private Instant playAt;
+    private Duration duration;
 
-    public int getLengthMS() {
-        return lengthMS;
+    public Duration getDuration() {
+        return duration;
     }
 
-    public void setLengthMS(int lengthMS) {
-        this.lengthMS = lengthMS;
+    public void setDuration(Duration duration) {
+        this.duration = duration;
     }
 
     public byte[] getAudioData() {
@@ -38,9 +39,13 @@ public class AudioChunk {
     @Override
     public String toString() {
         return "AudioChunk{" +
-                "lengthMS=" + lengthMS +
+                "duration=" + duration +
                 ", audioDataLength=" + audioData.length +
                 ", playAt=" + playAt +
                 '}';
+    }
+
+    public Instant getEndAt() {
+        return getPlayAt().plus(duration);
     }
 }
