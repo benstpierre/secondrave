@@ -1,7 +1,10 @@
 package com.secondrave.broadcast;
 
-import com.secondrave.broadcast.server.AudioServer;
 import com.secondrave.broadcast.server.AudioCapture;
+import com.secondrave.broadcast.server.AudioChunk;
+import com.secondrave.broadcast.server.AudioServer;
+import org.jetlang.channels.MemoryChannel;
+import org.jetlang.fibers.ThreadFiber;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
@@ -37,6 +40,8 @@ public class Program implements ActionListener, ItemListener {
     private Mixer selectedMixer;
     private AudioCapture audioCapture;
     private AudioServer audioServer;
+    private MemoryChannel<AudioChunk> channel;
+    private ThreadFiber fiber;
 
     public static void main(String[] args) {
         new Program().doTray();
@@ -111,13 +116,27 @@ public class Program implements ActionListener, ItemListener {
     }
 
     private void startServer() {
-        this.audioServer = new AudioServer();
-        new Thread(audioServer).start();
-        this.audioCapture = new AudioCapture(selectedMixer, dataLineInfo, audioFormat, audioServer);
-        new Thread(audioCapture).start();
+        //Jetlang setup code
+        {
+            this.fiber = new ThreadFiber();
+            this.fiber.start();
+            this.channel = new MemoryChannel<AudioChunk>();
+        }
+        //Start audio capture thread for capture
+        {
+            this.audioCapture = new AudioCapture(channel, selectedMixer, dataLineInfo, audioFormat);
+            new Thread(audioCapture).start();
+        }
+        //Start audio server
+        {
+            this.audioServer = new AudioServer(channel, fiber);
+            new Thread(audioServer).start();
+        }
     }
 
     private void stopServer() {
+        this.fiber.dispose();
+        this.fiber = null;
         this.audioCapture.requestStop();
         this.audioCapture = null;
         this.audioServer.requestStop();

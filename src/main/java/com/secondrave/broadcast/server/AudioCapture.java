@@ -1,5 +1,6 @@
 package com.secondrave.broadcast.server;
 
+import org.jetlang.channels.MemoryChannel;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
@@ -15,19 +16,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class AudioCapture implements Runnable {
 
+    private final MemoryChannel<AudioChunk> channel;
     private final Mixer selectedMixer;
     private final DataLine.Info dataLineInfo;
     private final AudioFormat audioFormat;
-    private final AudioServer audioServer;
 
     final Executor executor = Executors.newFixedThreadPool(1);
+
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
 
-    public AudioCapture(Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat, AudioServer audioServer) {
+    public AudioCapture(MemoryChannel<AudioChunk> channel, Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat) {
+        this.channel = channel;
         this.selectedMixer = selectedMixer;
         this.dataLineInfo = dataLineInfo;
         this.audioFormat = audioFormat;
-        this.audioServer = audioServer;
     }
 
     public void requestStop() {
@@ -85,6 +87,10 @@ public class AudioCapture implements Runnable {
         }
     }
 
+    public void stop() {
+        this.keepGoing.set(false);
+    }
+
     private void pushAudioData(final byte[] arrData, final Instant currentSampleStartsAtInstant) {
         executor.execute(new Runnable() {
             @Override
@@ -92,8 +98,8 @@ public class AudioCapture implements Runnable {
                 final AudioChunk audioChunk = new AudioChunk();
                 audioChunk.setAudioData(arrData);
                 audioChunk.setDuration(Duration.millis((int) (arrData.length / 44.1 / 2)));
-                audioChunk.setPlayAt(currentSampleStartsAtInstant.plus(Duration.standardSeconds(30)));
-                audioServer.pushAudioData(audioChunk);
+                audioChunk.setPlayAt(currentSampleStartsAtInstant);
+                channel.publish(new AudioChunk());
             }
         });
     }
