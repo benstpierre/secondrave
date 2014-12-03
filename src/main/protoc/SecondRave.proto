@@ -1,0 +1,12 @@
+package secondraveprotos;
+
+
+option java_package = "com.secondrave.protos";
+option java_outer_classname = "SecondRaveProtos";
+
+
+message AudioPiece {
+    required int64 playAt = 1;
+    required int32 duration = 2;
+    required bytes audioData = 3;
+}

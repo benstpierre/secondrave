@@ -1,5 +1,7 @@
 package com.secondrave.broadcast.server;
 
+import com.google.protobuf.ByteString;
+import com.secondrave.protos.SecondRaveProtos;
 import org.jetlang.channels.MemoryChannel;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -16,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class AudioCapture implements Runnable {
 
-    private final MemoryChannel<AudioChunk> channel;
+    private final MemoryChannel<SecondRaveProtos.AudioPiece> channel;
     private final Mixer selectedMixer;
     private final DataLine.Info dataLineInfo;
     private final AudioFormat audioFormat;
@@ -25,7 +27,7 @@ public class AudioCapture implements Runnable {
 
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
 
-    public AudioCapture(MemoryChannel<AudioChunk> channel, Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat) {
+    public AudioCapture(MemoryChannel<SecondRaveProtos.AudioPiece> channel, Mixer selectedMixer, DataLine.Info dataLineInfo, AudioFormat audioFormat) {
         this.channel = channel;
         this.selectedMixer = selectedMixer;
         this.dataLineInfo = dataLineInfo;
@@ -95,11 +97,12 @@ public class AudioCapture implements Runnable {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                final AudioChunk audioChunk = new AudioChunk();
-                audioChunk.setAudioData(arrData);
-                audioChunk.setDuration(Duration.millis((int) (arrData.length / 44.1 / 2)));
-                audioChunk.setPlayAt(currentSampleStartsAtInstant);
-                channel.publish(new AudioChunk());
+                final SecondRaveProtos.AudioPiece audioPiece = SecondRaveProtos.AudioPiece.newBuilder()
+                        .setAudioData(ByteString.copyFrom(arrData))
+                        .setDuration((int) (arrData.length / 44.1 / 2))
+                        .setPlayAt(currentSampleStartsAtInstant.getMillis())
+                        .build();
+                channel.publish(audioPiece);
             }
         });
     }

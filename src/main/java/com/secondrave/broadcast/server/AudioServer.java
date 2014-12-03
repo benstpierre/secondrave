@@ -1,5 +1,6 @@
 package com.secondrave.broadcast.server;
 
+import com.secondrave.protos.SecondRaveProtos;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -7,7 +8,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+import org.jetlang.channels.Channel;
 import org.jetlang.channels.MemoryChannel;
+import org.jetlang.fibers.Fiber;
 import org.jetlang.fibers.ThreadFiber;
 
 /**
@@ -16,13 +19,19 @@ import org.jetlang.fibers.ThreadFiber;
 public class AudioServer implements Runnable {
 
 
+    private static AudioServer currentInstance;
+
     private final ThreadFiber fiber;
-    private final MemoryChannel<AudioChunk> channel;
+    private final MemoryChannel<SecondRaveProtos.AudioPiece> channel;
     private Server server;
 
-    public AudioServer(MemoryChannel<AudioChunk> channel, ThreadFiber fiber) {
+    public AudioServer(MemoryChannel<SecondRaveProtos.AudioPiece> channel, ThreadFiber fiber) {
         this.channel = channel;
         this.fiber = fiber;
+    }
+
+    public static synchronized Pair<Fiber, Channel<SecondRaveProtos.AudioPiece>> currentChannelInfo() {
+        return new Pair<Fiber, Channel<SecondRaveProtos.AudioPiece>>(currentInstance.fiber, currentInstance.channel);
     }
 
     @Override
@@ -57,9 +66,11 @@ public class AudioServer implements Runnable {
                 context.addServlet(holderEvents, "/events/*");
             }
         }
-
         try {
             server.start();
+            synchronized (AudioServer.class) {
+                AudioServer.currentInstance = this;
+            }
             server.join();
         } catch (Exception e) {
             e.printStackTrace();
@@ -69,6 +80,9 @@ public class AudioServer implements Runnable {
     public void requestStop() {
         try {
             server.stop();
+            synchronized (AudioServer.class) {
+                AudioServer.currentInstance = null;
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

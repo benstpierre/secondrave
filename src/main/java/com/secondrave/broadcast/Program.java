@@ -1,8 +1,8 @@
 package com.secondrave.broadcast;
 
 import com.secondrave.broadcast.server.AudioCapture;
-import com.secondrave.broadcast.server.AudioChunk;
 import com.secondrave.broadcast.server.AudioServer;
+import com.secondrave.protos.SecondRaveProtos;
 import org.jetlang.channels.MemoryChannel;
 import org.jetlang.fibers.ThreadFiber;
 
@@ -40,7 +40,7 @@ public class Program implements ActionListener, ItemListener {
     private Mixer selectedMixer;
     private AudioCapture audioCapture;
     private AudioServer audioServer;
-    private MemoryChannel<AudioChunk> channel;
+    private MemoryChannel<SecondRaveProtos.AudioPiece> channel;
     private ThreadFiber fiber;
 
     public static void main(String[] args) {
@@ -120,7 +120,7 @@ public class Program implements ActionListener, ItemListener {
         {
             this.fiber = new ThreadFiber();
             this.fiber.start();
-            this.channel = new MemoryChannel<AudioChunk>();
+            this.channel = new MemoryChannel<SecondRaveProtos.AudioPiece>();
         }
         //Start audio capture thread for capture
         {
