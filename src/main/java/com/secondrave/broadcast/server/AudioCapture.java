@@ -50,7 +50,7 @@ public class AudioCapture implements Runnable {
         }
 
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        final int bufferSize = (int) audioFormat.getSampleRate() * audioFormat.getFrameSize();
+        final int bufferSize = (int) audioFormat.getSampleRate();
         final byte[] data = new byte[bufferSize];
         int numBytesRead;
 
