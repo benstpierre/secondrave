@@ -70,7 +70,7 @@ public class AudioCapture implements Runnable {
                 pushAudioData(arrData, currentStart);
                 out.reset();
                 count = 0;
-                currentStart = currentStart.plus(Duration.millis((int) (arrData.length / 44.1 / 2)));
+                currentStart = currentStart.plus(Duration.millis((int) (arrData.length / 44.1 / audioFormat.getFrameSize())));
             }
         }
 
