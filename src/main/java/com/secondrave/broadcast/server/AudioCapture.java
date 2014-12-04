@@ -50,23 +50,22 @@ public class AudioCapture implements Runnable {
         }
 
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        final int frameSizeInBytes = audioFormat.getFrameSize();
-        final int bufferLengthInFrames = targetDataLine.getBufferSize() / 8;
-        final int bufferLengthInBytes = bufferLengthInFrames * frameSizeInBytes;
-        byte[] data = new byte[bufferLengthInBytes];
+        final int bufferSize = (int) audioFormat.getSampleRate() * audioFormat.getFrameSize();
+        final byte[] data = new byte[bufferSize];
         int numBytesRead;
 
         targetDataLine.start();
 
         int count = 0;
-        Instant currentStart = Instant.now().plus(Duration.standardSeconds(10));
+        Instant currentStart = Instant.now().plus(Duration.standardSeconds(2));
         while (this.keepGoing.get()) {
-            if ((numBytesRead = targetDataLine.read(data, 0, bufferLengthInBytes)) == -1) {
+            numBytesRead = targetDataLine.read(data, 0, bufferSize);
+            if (numBytesRead == -1) {
                 break;
             }
             out.write(data, 0, numBytesRead);
             count++;
-            if (count == 20) {
+            if (count == 1) {
                 final byte[] arrData = out.toByteArray();
                 pushAudioData(arrData, currentStart);
                 out.reset();
