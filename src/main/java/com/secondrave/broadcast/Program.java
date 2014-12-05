@@ -42,6 +42,7 @@ public class Program implements ActionListener, ItemListener {
     private AudioServer audioServer;
     private MemoryChannel<SecondRaveProtos.AudioPiece> channel;
     private ThreadFiber fiber;
+    private TrayIcon trayIcon;
 
     public static void main(String[] args) {
         new Program().doTray();
@@ -53,7 +54,7 @@ public class Program implements ActionListener, ItemListener {
             return;
         }
         final PopupMenu popup = new PopupMenu();
-        final TrayIcon trayIcon = new TrayIcon(createImage("/images/headphones.png", "tray icon"));
+        this.trayIcon = new TrayIcon(createImage("/images/headphones.png", "Tray icon"));
         final SystemTray tray = SystemTray.getSystemTray();
 
         // Create a pop-up menu components
@@ -131,6 +132,16 @@ public class Program implements ActionListener, ItemListener {
         {
             this.audioServer = new AudioServer(channel, fiber);
             new Thread(audioServer).start();
+        }
+        //Change Tray Icon to red
+        {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    Program.this.trayIcon.setImage(createImage("/images/headphones-onair.png", "Tray icon - On Air"));
+                }
+            });
+
         }
     }
 
