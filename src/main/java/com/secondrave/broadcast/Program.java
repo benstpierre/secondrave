@@ -138,6 +138,8 @@ public class Program implements ActionListener, ItemListener {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
+                    Program.this.startServer.setEnabled(false);
+                    Program.this.stopServer.setEnabled(true);
                     Program.this.trayIcon.setImage(createImage("/images/headphones-onair.png", "Tray icon - On Air"));
                 }
             });
@@ -152,6 +154,15 @@ public class Program implements ActionListener, ItemListener {
         this.audioCapture = null;
         this.audioServer.requestStop();
         this.audioServer = null;
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                Program.this.startServer.setEnabled(true);
+                Program.this.stopServer.setEnabled(false);
+                Program.this.trayIcon.setImage(createImage("/images/headphones.png", "Tray icon - On Air"));
+            }
+        });
+
     }
 
     private void showAbout() {
