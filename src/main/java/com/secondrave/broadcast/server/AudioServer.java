@@ -43,7 +43,6 @@ public class AudioServer implements Runnable {
         // HTTP connector
         {
             final ServerConnector http = new ServerConnector(server);
-            http.setHost("10.0.1.13");
             http.setPort(8080);
             http.setIdleTimeout(30000);
             server.addConnector(http);
