@@ -8,8 +8,6 @@ import org.jetlang.core.Callback;
 import org.jetlang.core.Disposable;
 import org.jetlang.fibers.Fiber;
 
-import java.io.IOException;
-
 public class SoundSocket extends WebSocketAdapter implements Callback<SecondRaveProtos.AudioPiece> {
 
     private Disposable subscription;
@@ -34,14 +32,11 @@ public class SoundSocket extends WebSocketAdapter implements Callback<SecondRave
     public void onWebSocketError(Throwable cause) {
         super.onWebSocketError(cause);
         cause.printStackTrace(System.err);
+        subscription.dispose();
     }
 
     @Override
     public void onMessage(SecondRaveProtos.AudioPiece message) {
-        try {
-            getRemote().sendBytes(message.toByteString().asReadOnlyByteBuffer());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        getRemote().sendBytesByFuture(message.toByteString().asReadOnlyByteBuffer());
     }
 }
