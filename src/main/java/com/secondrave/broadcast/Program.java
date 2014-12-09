@@ -148,12 +148,18 @@ public class Program implements ActionListener, ItemListener {
     }
 
     private void stopServer() {
-        this.fiber.dispose();
-        this.fiber = null;
-        this.audioCapture.requestStop();
-        this.audioCapture = null;
-        this.audioServer.requestStop();
-        this.audioServer = null;
+        if (this.fiber != null) {
+            this.fiber.dispose();
+            this.fiber = null;
+        }
+        if (this.audioCapture != null) {
+            this.audioCapture.requestStop();
+            this.audioCapture = null;
+        }
+        if (this.audioServer != null) {
+            this.audioServer.requestStop();
+            this.audioServer = null;
+        }
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
