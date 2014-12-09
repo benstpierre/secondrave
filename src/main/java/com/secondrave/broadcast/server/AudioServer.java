@@ -60,6 +60,7 @@ public class AudioServer implements Runnable {
                 final ServletHolder holderEvents = new ServletHolder("ws-events", new WebSocketServlet() {
                     @Override
                     public void configure(WebSocketServletFactory factory) {
+                        factory.getPolicy().setIdleTimeout(10000);
                         factory.register(SoundSocket.class);
                     }
                 });
